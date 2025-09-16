@@ -88,6 +88,8 @@
 ---   To enable fuzzy matching, manually set to "menuone,noselect,fuzzy". Consider
 ---   also adding "nosort" flag to preserve initial order when filtering.
 --- - 'shortmess' is appended with "c" flag for silent <C-n> fallback.
+--- - 'complete' gets removed "t" flag (if fallback action is default), as it
+---   leads to visible lags.
 ---
 --- # Snippets ~
 ---
@@ -796,6 +798,10 @@ H.apply_config = function(config)
   local shortmess_flags = 'c' .. (vim.fn.has('nvim-0.10') == 0 and 'C' or '')
   was_set = vim.api.nvim_get_option_info2('shortmess', { scope = 'global' }).was_set
   if not was_set then vim.opt.shortmess:append(shortmess_flags) end
+
+  -- - Remove "t" flag to reduce visible lags
+  was_set = vim.api.nvim_get_option_info2('complete', { scope = 'global' }).was_set
+  if not was_set and config.fallback_action == '<C-n>' then vim.opt.complete:remove('t') end
 end
 
 H.create_autocommands = function(config)
