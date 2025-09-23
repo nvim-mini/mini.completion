@@ -1308,7 +1308,7 @@ H.make_add_kind_hlgroup = function()
 
   return function(item)
     local _, hl, is_default = _G.MiniIcons.get('lsp', H.kind_map[item.kind] or 'Unknown')
-    item.kind_hlgroup = not is_default and hl or nil
+    item.kind_hlgroup = item.kind_hlgroup or (not is_default and hl or nil)
   end
 end
 
