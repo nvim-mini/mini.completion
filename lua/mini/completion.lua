@@ -45,10 +45,14 @@
 ---
 --- - Force two-stage/fallback completion (`<C-Space>` / `<A-Space>` by default).
 ---
---- - LSP kind highlighting ("Function", "Keyword", etc.). Requires Neovim>=0.11.
----   By default uses "lsp" category of |MiniIcons| (if enabled). Can be customized
----   via `config.lsp_completion.process_items` by adding field <kind_hlgroup>
----   (same meaning as in |complete-items|) to items.
+--- - Customizable highlighting of LSP items. Requires Neovim>=0.11.
+---   Use `config.lsp_completion.process_items` to set dedicated highlight group
+---   in supported fields:
+---     - <abbr_hlgroup> - item label (`abbr` in terms of |complete-items|).
+---       By default only checks if item is marked as deprecated and sets
+---       `MiniCompletionDeprecated` highlight group.
+---     - <kind_hlgroup> - LSP kind ("Function", "Keyword", etc.). By default
+---       uses "lsp" category of |MiniIcons| (if enabled).
 ---
 --- What it doesn't do:
 --- - Many configurable sources.
@@ -196,6 +200,7 @@
 --- # Highlight groups ~
 ---
 --- * `MiniCompletionActiveParameter` - signature active parameter.
+--- * `MiniCompletionDeprecated` - candidates that marked as deprecated.
 --- * `MiniCompletionInfoBorderOutdated` - info window border when text is outdated
 ---   due to explicit delay during fast movement through candidates.
 ---
@@ -493,6 +498,7 @@ end
 --- Steps:
 --- - Filter and sort items according to supplied method.
 --- - Arrange items further by completion item kind according to their priority.
+--- - Add `MiniCompletionDeprecated` <abbr_hlgroup> if item is marked as deprecated.
 --- - If |MiniIcons| is enabled, add <kind_hlgroup> based on the "lsp" category.
 ---
 --- Example of forcing fuzzy matching, filtering out `Text` items, and putting
@@ -542,11 +548,11 @@ MiniCompletion.default_process_items = function(items, base, opts)
   -- Arrange by kind
   if opts.kind_priority ~= nil then res = H.lsp_arrange_by_kind(res, opts.kind_priority) end
 
-  -- Possibly add "kind" highlighting
-  if _G.MiniIcons == nil then return res end
-
+  -- Add custom highlighting
+  local add_abbr_hlgroup = H.make_add_abbr_hlgroup()
   local add_kind_hlgroup = H.make_add_kind_hlgroup()
   for _, item in ipairs(res) do
+    add_abbr_hlgroup(item)
     add_kind_hlgroup(item)
   end
   return res
@@ -628,6 +634,8 @@ MiniCompletion.get_lsp_capabilities = function(opts)
   local resolve_support = { 'detail', 'documentation' }
   if opts.resolve_additional_text_edits then table.insert(resolve_support, 1, 'additionalTextEdits') end
 
+  local tag_valueset = vim.fn.has('nvim-0.11') == 1 and { vim.lsp.protocol.CompletionTag.Deprecated } or {}
+
   return {
     textDocument = {
       -- https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/#completionClientCapabilities
@@ -637,9 +645,9 @@ MiniCompletion.get_lsp_capabilities = function(opts)
           snippetSupport = true,
           commitCharactersSupport = false,
           documentationFormat = { 'markdown', 'plaintext' },
-          deprecatedSupport = false,
+          deprecatedSupport = true,
           preselectSupport = false,
-          tagSupport = { valueSet = {} },
+          tagSupport = { valueSet = tag_valueset },
           insertReplaceSupport = true,
           resolveSupport = { properties = resolve_support },
           insertTextModeSupport = { valueSet = { 1 } },
@@ -831,6 +839,7 @@ end
 
 H.create_default_hl = function()
   vim.api.nvim_set_hl(0, 'MiniCompletionActiveParameter', { default = true, link = 'LspSignatureActiveParameter' })
+  vim.api.nvim_set_hl(0, 'MiniCompletionDeprecated', { default = true, link = 'DiagnosticDeprecated' })
   vim.api.nvim_set_hl(0, 'MiniCompletionInfoBorderOutdated', { default = true, link = 'DiagnosticFloatingWarn' })
 end
 
@@ -1261,6 +1270,7 @@ H.lsp_completion_response_items_to_complete_items = function(items)
       -- built-in filtering capabilities (as it uses `word` to filter).
       word = needs_snippet_insert and H.lsp_get_filterword(item) or word,
       abbr = item.label,
+      abbr_hlgroup = item.abbr_hlgroup,
       kind = item_kinds[item.kind] or 'Unknown',
       kind_hlgroup = item.kind_hlgroup,
       menu = label_detail,
@@ -1275,10 +1285,26 @@ H.lsp_completion_response_items_to_complete_items = function(items)
   return res
 end
 
+H.make_add_abbr_hlgroup = function()
+  local deprecated_tag = vim.lsp.protocol.CompletionTag.Deprecated
+  local contains = vim.list_contains
+  return function(item)
+    local is_deprecated = item.deprecated or (item.tags and contains(item.tags, deprecated_tag))
+    item.abbr_hlgroup = item.abbr_hlgroup or (is_deprecated and 'MiniCompletionDeprecated' or nil)
+  end
+end
+if vim.fn.has('nvim-0.11') == 0 then H.make_add_abbr_hlgroup = function()
+  return function() end
+end end
+
 H.make_add_kind_hlgroup = function()
   -- Account for possible effect of `MiniIcons.tweak_lsp_kind()` which modifies
   -- only array part of `CompletionItemKind` but not "map" part
   H.ensure_kind_map()
+
+  if _G.MiniIcons == nil then
+    return function() end
+  end
 
   return function(item)
     local _, hl, is_default = _G.MiniIcons.get('lsp', H.kind_map[item.kind] or 'Unknown')

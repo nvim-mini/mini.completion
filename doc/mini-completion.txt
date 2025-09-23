@@ -45,10 +45,14 @@ Features:
 
 - Force two-stage/fallback completion (`<C-Space>` / `<A-Space>` by default).
 
-- LSP kind highlighting ("Function", "Keyword", etc.). Requires Neovim>=0.11.
-  By default uses "lsp" category of |MiniIcons| (if enabled). Can be customized
-  via `config.lsp_completion.process_items` by adding field <kind_hlgroup>
-  (same meaning as in |complete-items|) to items.
+- Customizable highlighting of LSP items. Requires Neovim>=0.11.
+  Use `config.lsp_completion.process_items` to set dedicated highlight group
+  in supported fields:
+    - <abbr_hlgroup> - item label (`abbr` in terms of |complete-items|).
+      By default only checks if item is marked as deprecated and sets
+      `MiniCompletionDeprecated` highlight group.
+    - <kind_hlgroup> - LSP kind ("Function", "Keyword", etc.). By default
+      uses "lsp" category of |MiniIcons| (if enabled).
 
 What it doesn't do:
 - Many configurable sources.
@@ -196,6 +200,7 @@ your 'init.lua' to make customized mapping: >lua
 # Highlight groups ~
 
 * `MiniCompletionActiveParameter` - signature active parameter.
+* `MiniCompletionDeprecated` - candidates that marked as deprecated.
 * `MiniCompletionInfoBorderOutdated` - info window border when text is outdated
   due to explicit delay during fast movement through candidates.
 
@@ -362,6 +367,7 @@ Default processing of LSP items
 Steps:
 - Filter and sort items according to supplied method.
 - Arrange items further by completion item kind according to their priority.
+- Add `MiniCompletionDeprecated` <abbr_hlgroup> if item is marked as deprecated.
 - If |MiniIcons| is enabled, add <kind_hlgroup> based on the "lsp" category.
 
 Example of forcing fuzzy matching, filtering out `Text` items, and putting

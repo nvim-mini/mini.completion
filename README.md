@@ -34,7 +34,9 @@ https://github.com/user-attachments/assets/dd3fe2e2-9795-47c1-9479-0b3fa14c6e75
 - Automatic display in floating window of completion item info (via 'completionItem/resolve' request) and signature help (with highlighting of active parameter if LSP server provides such information). Scrolling is possible in both info/signature window (`<C-f>` / `<C-b>` by default).
 - Automatic actions are done after some configurable amount of delay. This reduces computational load and allows fast typing (completion and signature help) and item selection (item info)
 - User can force two-stage/fallback completion (`<C-Space>` / `<A-Space>` by default).
-- Highlighting of LSP kind (like "Function", "Keyword", etc.). Requires enabled ['mini.icons'](https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-icons.md) (uses its "lsp" category) and Neovim>=0.11.
+- Customizable highlighting of LSP items. Requires Neovim>=0.11. Supported:
+    - Item label. By default only checks if item is marked as deprecated and sets `MiniCompletionDeprecated` highlight group.
+    - LSP kind (like "Function", "Keyword", etc.). Requires enabled ['mini.icons'](https://github.com/nvim-mini/mini.nvim/blob/main/readmes/mini-icons.md) (uses its "lsp" category)
 
 ## Dependencies
 
