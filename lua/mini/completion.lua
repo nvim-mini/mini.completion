@@ -1,10 +1,7 @@
 --- *mini.completion* Completion and signature help
---- *MiniCompletion*
 ---
 --- MIT License Copyright (c) 2021 Evgeni Chasnovski
----
---- ==============================================================================
----
+
 --- Key design ideas:
 --- - Have an async (with customizable "debounce" delay) "two-stage chain
 ---   completion": first try to get completion items from LSP client (if set
@@ -17,7 +14,7 @@
 --- - Two-stage chain completion:
 ---     - First stage is an LSP completion implemented via
 ---       |MiniCompletion.completefunc_lsp()|. It should be set up as either
----       |completefunc| or |omnifunc|. It tries to get completion items from
+---       |'completefunc'| or |'omnifunc'|. It tries to get completion items from
 ---       LSP client (via 'textDocument/completion' request). Custom
 ---       preprocessing of response items is possible (with
 ---       `MiniCompletion.config.lsp_completion.process_items`), for example
@@ -52,7 +49,7 @@
 ---       By default only checks if item is marked as deprecated and sets
 ---       `MiniCompletionDeprecated` highlight group.
 ---     - <kind_hlgroup> - LSP kind ("Function", "Keyword", etc.). By default
----       uses "lsp" category of |MiniIcons| (if enabled).
+---       uses "lsp" category of |mini.icons| (if enabled).
 ---
 --- What it doesn't do:
 --- - Many configurable sources.
@@ -64,10 +61,10 @@
 ---
 --- Suggested dependencies (provide extra functionality, will work without them):
 ---
---- - Enabled |MiniIcons| module to highlight LSP kind (requires Neovim>=0.11).
+--- - Enabled |mini.icons| module to highlight LSP kind (requires Neovim>=0.11).
 ---   If absent, |MiniCompletion.default_process_items()| does not add highlighting.
 ---   Also take a look at |MiniIcons.tweak_lsp_kind()|.
---- - Enabled |MiniSnippets| module for better snippet handling (much recommended).
+--- - Enabled |mini.snippets| module for better snippet handling (much recommended).
 ---   If absent and custom snippet insert is not configured, |vim.snippet.expand()|
 ---   is used on Neovim>=0.10 (nothing extra is done on earlier versions).
 ---   See |MiniCompletion.default_snippet_insert()|.
@@ -149,12 +146,12 @@
 ---   version of item's kind. Modify it directly to change what is displayed.
 ---   If you have |mini.icons| enabled, take a look at |MiniIcons.tweak_lsp_kind()|.
 ---
---- - If you have trouble using custom (overridden) |vim.ui.input|, disable
+--- - If you have trouble using custom (overridden) |vim.ui.input()|, disable
 ---   'mini.completion' for input buffer (usually based on its 'filetype').
 ---
 --- # Comparisons ~
 ---
---- - 'hrsh7th/nvim-cmp':
+--- - [hrsh7th/nvim-cmp](https://github.com/hrsh7th/nvim-cmp):
 ---     - Implements own popup menu to show completion candidates, while this
 ---       module reuses |ins-completion-menu|.
 ---     - Has more complex design which allows multiple sources, each in a form of
@@ -162,7 +159,7 @@
 ---     - Requires separate plugin for automated signature help.
 ---     - Implements own "ghost text" feature, while this module does not.
 ---
---- - 'Saghen/blink.cmp':
+--- - [Saghen/blink.cmp](https://github.com/Saghen/blink.cmp):
 ---     - Mostly similar to 'nvim-cmp' comparison: provides more features at the
 ---       cost of more code and config complexity, while this module is designed
 ---       to provide only a handful of "enough" features while relying on Neovim's
@@ -199,12 +196,12 @@
 --- <
 --- # Highlight groups ~
 ---
---- * `MiniCompletionActiveParameter` - signature active parameter.
---- * `MiniCompletionDeprecated` - candidates that marked as deprecated.
---- * `MiniCompletionInfoBorderOutdated` - info window border when text is outdated
+--- - `MiniCompletionActiveParameter` - signature active parameter.
+--- - `MiniCompletionDeprecated` - candidates that marked as deprecated.
+--- - `MiniCompletionInfoBorderOutdated` - info window border when text is outdated
 ---   due to explicit delay during fast movement through candidates.
 ---
---- To change any highlight group, modify it directly with |:highlight|.
+--- To change any highlight group, set it directly with |nvim_set_hl()|.
 ---
 --- # Disabling ~
 ---
@@ -213,9 +210,8 @@
 --- number of different scenarios and customization intentions, writing exact
 --- rules for disabling module's functionality is left to user. See
 --- |mini.nvim-disabling-recipes| for common recipes.
+---@tag MiniCompletion
 
---- Events ~
----
 --- To allow user customization, certain |User| autocommand events are
 --- triggered under common circumstances:
 ---
@@ -297,9 +293,7 @@ MiniCompletion.setup = function(config)
   H.create_default_hl()
 end
 
---- Module config
----
---- Default values:
+--- Defaults ~
 ---@eval return MiniDoc.afterlines_to_code(MiniDoc.current.eval_section)
 MiniCompletion.config = {
   -- Delay (debounce type, in ms) between certain Neovim event and action.
@@ -412,7 +406,7 @@ end
 --- actions.
 ---
 --- Designed to be used with |autocmd|. No need to use it directly, everything
---- is setup in |MiniCompletion.setup|.
+--- is setup in |MiniCompletion.setup()|.
 ---
 ---@param actions table|nil Array containing any of 'completion', 'info', or
 ---   'signature' string. Default: array containing all of them.
@@ -423,12 +417,12 @@ MiniCompletion.stop = function(actions)
   end
 end
 
---- Module's |complete-function|
+--- Module's |complete-functions|
 ---
 --- This is the main function which enables two-stage completion. It should be
---- set as one of |completefunc| or |omnifunc|.
+--- set as one of |'completefunc'| or |'omnifunc'|.
 ---
---- No need to use it directly, everything is setup in |MiniCompletion.setup|.
+--- No need to use it directly, everything is setup in |MiniCompletion.setup()|.
 MiniCompletion.completefunc_lsp = function(findstart, base)
   -- Early return
   if not H.has_lsp_clients('completionProvider') or H.completion.lsp.status == 'sent' then
@@ -499,7 +493,7 @@ end
 --- - Filter and sort items according to supplied method.
 --- - Arrange items further by completion item kind according to their priority.
 --- - Add `MiniCompletionDeprecated` <abbr_hlgroup> if item is marked as deprecated.
---- - If |MiniIcons| is enabled, add <kind_hlgroup> based on the "lsp" category.
+--- - If |mini.icons| is enabled, add <kind_hlgroup> based on the "lsp" category.
 ---
 --- Example of forcing fuzzy matching, filtering out `Text` items, and putting
 --- `Snippet` items last: >lua
@@ -561,13 +555,13 @@ end
 --- Default snippet insert
 ---
 --- Order of preference:
---- - Use |MiniSnippets| if set up (i.e. there is `require('mini.snippets').setup()`).
+--- - Use |mini.snippets| if set up (i.e. after `require('mini.snippets').setup()`).
 --- - Use |vim.snippet.expand()| on Neovim>=0.10
 --- - Add snippet text at cursor as is.
 ---
 --- After snippet is inserted, user is expected to navigate/jump between dedicated
 --- places (tabstops) to adjust inserted text as needed:
---- - |MiniSnippets| by default uses <C-l> / <C-h> to jump to next/previous tabstop.
+--- - |mini.snippets| by default uses <C-l> / <C-h> to jump to next/previous tabstop.
 ---   Can be adjusted in `mappings` of |MiniSnippets.config|.
 --- - |vim.snippet| on Neovim=0.10 requires manually created mappings for jumping
 ---   between tabstops (see |vim.snippet.jump()|). Neovim>=0.11 sets them up
@@ -580,8 +574,8 @@ end
 ---
 ---@param snippet string Snippet body to insert at cursor.
 ---
----@seealso |MiniSnippets-session| if 'mini.snippets' is set up.
---- |vim.snippet| for Neovim's built-in snippet engine.
+---@seealso - |MiniSnippets-session| if 'mini.snippets' is set up.
+--- - |vim.snippet| for Neovim's built-in snippet engine.
 MiniCompletion.default_snippet_insert = function(snippet)
   if _G.MiniSnippets then
     local insert = MiniSnippets.config.expand.insert or MiniSnippets.default_insert
