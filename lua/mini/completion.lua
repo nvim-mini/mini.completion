@@ -116,8 +116,8 @@
 --- - To stop LSP server from suggesting snippets, disable (set to `false`) the
 ---   following capability during LSP server start:
 ---   `textDocument.completion.completionItem.snippetSupport`.
---- - If snippet body doesn't contain tabstops, `lsp_completion.snippet_insert`
----   is not called and text is inserted as is.
+--- - If snippet body doesn't contain tabstop, variable, tab, or newline,
+---   `lsp_completion.snippet_insert` is not called and text is inserted as-is.
 ---
 --- # Notes ~
 ---
@@ -1243,11 +1243,14 @@ H.lsp_completion_response_items_to_complete_items = function(items)
 
     local is_snippet_kind = item.kind == snippet_kind
     local is_snippet_format = item.insertTextFormat == snippet_inserttextformat
-    -- Treat item as snippet only if it has tabstops or variables. This is
-    -- important to make "implicit" expand work with LSP servers that report
-    -- even regular words as `InsertTextFormat.Snippet` (like `gopls`).
-    local needs_snippet_insert = (is_snippet_kind or is_snippet_format)
-      and (word:find('[^\\]%${?%w') ~= nil or word:find('^%${?%w') ~= nil)
+    -- Treat item as snippet only if it has tabstop, variable, tab, or newline.
+    -- It is important to make "implicit" expand work with LSP servers that
+    -- report even regular words as `InsertTextFormat.Snippet` (like `gopls`).
+    -- Otherwise it will "eat" the next typed non-keyword charater.
+    -- Account for tabs and newline to allow `snippet_insert` to deal with
+    -- reindenting and tab expansion.
+    local has_snippet_features = (word:find('[^\\]%${?%w') or word:find('^%${?%w') or word:find('[\n\t]')) ~= nil
+    local needs_snippet_insert = (is_snippet_kind or is_snippet_format) and has_snippet_features
 
     local details = item.labelDetails or {}
     -- NOTE: Using `table.concat({}, ' ')` would be cleaner but less performant
