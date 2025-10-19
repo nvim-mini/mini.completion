@@ -689,6 +689,10 @@ H.keys = {
   ctrl_n = vim.api.nvim_replace_termcodes('<C-g><C-g><C-n>', true, false, true),
 }
 
+-- Flags for whether there is support for dedicated options
+H.has_winborder = vim.fn.has('nvim-0.11') == 1
+H.has_pumborder = vim.fn.exists('+pumborder') == 1 -- Neovim>=0.12
+
 -- Caches for different actions -----------------------------------------------
 -- Field `lsp` is a table describing state of all used LSP requests. It has the
 -- following structure:
@@ -1528,8 +1532,9 @@ end
 
 H.info_window_options = function()
   local win_config = H.get_config().window.info
-  local default_border = (vim.fn.exists('+winborder') == 1 and vim.o.winborder ~= '') and vim.o.winborder or 'single'
+  local default_border = (H.has_winborder and vim.o.winborder ~= '') and vim.o.winborder or 'single'
   local border = win_config.border or default_border
+  local pumborder = H.has_pumborder and vim.o.pumborder or ''
 
   -- Compute dimensions based on actually visible lines to be displayed
   local lines = H.compute_visible_md_lines(vim.api.nvim_buf_get_lines(H.info.bufnr, 0, -1, false))
@@ -1538,7 +1543,8 @@ H.info_window_options = function()
   -- Compute position
   local event = H.info.event
   local left_to_pum = event.col - 1
-  local right_to_pum = event.col + event.width + (event.scrollbar and 1 or 0)
+  local pumborder_offset = (pumborder == '' or pumborder == 'none') and 0 or 2
+  local right_to_pum = event.col + event.width + (event.scrollbar and 1 or 0) + pumborder_offset
 
   local border_offset = border == 'none' and 0 or 2
   local space_left = left_to_pum - border_offset
@@ -1702,7 +1708,7 @@ end
 
 H.signature_window_opts = function()
   local win_config = H.get_config().window.signature
-  local default_border = (vim.fn.exists('+winborder') == 1 and vim.o.winborder ~= '') and vim.o.winborder or 'single'
+  local default_border = (H.has_winborder and vim.o.winborder ~= '') and vim.o.winborder or 'single'
   local border = win_config.border or default_border
   local lines = vim.api.nvim_buf_get_lines(H.signature.bufnr, 0, -1, false)
   local height, width = H.floating_dimensions(lines, win_config.height, win_config.width)
