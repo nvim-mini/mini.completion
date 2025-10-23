@@ -1345,7 +1345,7 @@ H.make_lsp_extra_actions = function(lsp_data)
   --   snippet is inserted and its session is active.
   local cur = vim.api.nvim_win_get_cursor(0)
   local extmark_opts = { end_row = cur[1] - 1, end_col = cur[2], right_gravity = false, end_right_gravity = true }
-  local track_id = vim.api.nvim_buf_set_extmark(0, H.ns_id, cur[1] - 1, cur[2], extmark_opts)
+  local track_extmark_id = vim.api.nvim_buf_set_extmark(0, H.ns_id, cur[1] - 1, cur[2], extmark_opts)
 
   vim.schedule(function()
     -- Do nothing if user exited Insert mode
@@ -1356,8 +1356,7 @@ H.make_lsp_extra_actions = function(lsp_data)
     -- created by server), but only if there is snippet (keep new characters
     -- for *only* text edits).
     if snippet ~= nil then
-      local ok, new = pcall(vim.api.nvim_buf_get_extmark_by_id, 0, H.ns_id, track_id, { details = true })
-      if ok then vim.api.nvim_buf_set_text(0, new[1], new[2], new[3].end_row, new[3].end_col, {}) end
+      H.del_extmark(track_extmark_id, true)
       pcall(vim.api.nvim_win_set_cursor, 0, cur)
     end
 
@@ -1417,15 +1416,12 @@ H.apply_tracked_text_edits = function(client_id, text_edits, from, to)
   H.apply_text_edits(client_id, text_edits)
 
   -- Restore cursor position
-  local cursor_data = vim.api.nvim_buf_get_extmark_by_id(0, H.ns_id, cursor_extmark_id, {})
-  vim.api.nvim_buf_del_extmark(0, H.ns_id, cursor_extmark_id)
+  local cursor_data = H.del_extmark(cursor_extmark_id)
   pcall(vim.api.nvim_win_set_cursor, 0, { cursor_data[1] + 1, cursor_data[2] })
 
   -- Update in place tracked range
-  local from_data = vim.api.nvim_buf_get_extmark_by_id(0, H.ns_id, from_extmark_id, {})
-  vim.api.nvim_buf_del_extmark(0, H.ns_id, from_extmark_id)
-  local to_data = vim.api.nvim_buf_get_extmark_by_id(0, H.ns_id, to_extmark_id, {})
-  vim.api.nvim_buf_del_extmark(0, H.ns_id, to_extmark_id)
+  local from_data = H.del_extmark(from_extmark_id)
+  local to_data = H.del_extmark(to_extmark_id)
   return { from_data[1] + 1, from_data[2] }, { to_data[1] + 1, to_data[2] }
 end
 
@@ -1886,6 +1882,18 @@ H.get_lsp_edit_range = function(response_data)
     -- Account for `textEdit` can be either `TextEdit` or `InsertReplaceEdit`
     if type(item.textEdit) == 'table' then return item.textEdit.range or item.textEdit.insert end
   end
+end
+
+H.del_extmark = function(extmark_id, with_text)
+  local data = vim.api.nvim_buf_get_extmark_by_id(0, H.ns_id, extmark_id, { details = true })
+  vim.api.nvim_buf_del_extmark(0, H.ns_id, extmark_id)
+  -- Possibly remove extmark's text
+  if not with_text or data[1] == nil or data[3].end_row == nil then return data end
+  local start_row, start_col, end_row, end_col = data[1], data[2], data[3].end_row, data[3].end_col
+  if start_row < end_row or (start_row == end_row and start_col < end_col) then
+    vim.api.nvim_buf_set_text(0, start_row, start_col, end_row, end_col, { '' })
+  end
+  return data
 end
 
 H.is_whitespace = function(s)
