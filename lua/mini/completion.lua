@@ -1370,6 +1370,8 @@ H.make_lsp_extra_actions = function(lsp_data)
     local prefix = string.rep('x', init_base.length)
     pcall(vim.api.nvim_buf_set_text, 0, from[1] - 1, from[2], to[1] - 1, to[2], { prefix })
     to = { from[1], from[2] + init_base.length }
+    local prefix_extmark_opts = { end_row = to[1] - 1, end_col = to[2] }
+    local prefix_extmark_id = vim.api.nvim_buf_set_extmark(0, H.ns_id, from[1] - 1, from[2], prefix_extmark_opts)
 
     -- Possibly adjust tracked range to come from LSP item. Clamp to existing
     -- text state because some LSP servers update `textEdit` during resolve
@@ -1391,6 +1393,9 @@ H.make_lsp_extra_actions = function(lsp_data)
 
     -- Expand snippet: remove base and insert at cursor
     pcall(vim.api.nvim_buf_set_text, 0, from[1] - 1, from[2], to[1] - 1, to[2], { '' })
+    -- - Ensure to work with bad `textEdit`, like not covering cursor position
+    vim.api.nvim_win_set_cursor(0, from)
+    H.del_extmark(prefix_extmark_id, true)
     local insert = H.get_config().lsp_completion.snippet_insert or MiniCompletion.default_snippet_insert
     insert(snippet)
   end)
