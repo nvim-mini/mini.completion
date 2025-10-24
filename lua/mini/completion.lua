@@ -1544,8 +1544,8 @@ H.info_window_options = function()
   -- Compute position
   local event = H.info.event
   local left_to_pum = event.col - 1
-  local pumborder_offset = (pumborder == '' or pumborder == 'none') and 0 or 2
-  local right_to_pum = event.col + event.width + (event.scrollbar and 1 or 0) + pumborder_offset
+  local offset = (pumborder == '' or pumborder == 'none') and (event.scrollbar and 1 or 0) or 2
+  local right_to_pum = event.col + event.width + offset
 
   local border_offset = border == 'none' and 0 or 2
   local space_left = left_to_pum - border_offset
