@@ -1516,8 +1516,8 @@ H.info_window_lines = function(info_id)
     -- Do nothing if completion item was changed
     if H.info.id ~= info_id then return end
 
-    -- Still use original item if there was error during resolve
-    if err ~= nil then result = result or lsp_data.item end
+    -- Still use original item if there was no response (usually due to error)
+    result = result or lsp_data.item
 
     H.info.lsp.result = result
     -- - Cache resolved item to not have to send same request on revisit.
