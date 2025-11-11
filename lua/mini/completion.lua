@@ -690,7 +690,7 @@ H.keys = {
 }
 
 -- Flags for whether there is support for dedicated options
-H.has_winborder = vim.fn.has('nvim-0.11') == 1
+H.has_no_winborder = vim.fn.has('nvim-0.11') == 0
 H.has_pumborder = vim.fn.exists('+pumborder') == 1 -- Neovim>=0.12
 
 -- Caches for different actions -----------------------------------------------
@@ -1533,7 +1533,7 @@ end
 
 H.info_window_options = function()
   local win_config = H.get_config().window.info
-  local default_border = (H.has_winborder and vim.o.winborder ~= '') and vim.o.winborder or 'single'
+  local default_border = (H.has_no_winborder or vim.o.winborder == '') and 'single' or nil
   local border = win_config.border or default_border
   local pumborder = H.has_pumborder and vim.o.pumborder or ''
 
@@ -1709,7 +1709,7 @@ end
 
 H.signature_window_opts = function()
   local win_config = H.get_config().window.signature
-  local default_border = (H.has_winborder and vim.o.winborder ~= '') and vim.o.winborder or 'single'
+  local default_border = (H.has_no_winborder or vim.o.winborder == '') and 'single' or nil
   local border = win_config.border or default_border
   local lines = vim.api.nvim_buf_get_lines(H.signature.bufnr, 0, -1, false)
   local height, width = H.floating_dimensions(lines, win_config.height, win_config.width)
