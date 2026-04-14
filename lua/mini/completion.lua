@@ -1762,8 +1762,10 @@ end
 
 -- Helpers for floating windows -----------------------------------------------
 H.ensure_buffer = function(cache, name)
-  if H.is_valid_buf(cache.bufnr) then return end
+  if H.is_loaded_buf(cache.bufnr) then return end
 
+  pcall(vim.api.nvim_buf_delete, cache.bufnr, { force = true })
+  cache.hl_filetype = nil
   local buf_id = vim.api.nvim_create_buf(false, true)
   cache.bufnr = buf_id
   H.set_buf_name(buf_id, name)
@@ -1840,7 +1842,7 @@ H.close_action_window = function(cache)
   cache.win_id = nil
 
   -- For some reason 'buftype' might be reset. Ensure that buffer is scratch.
-  if H.is_valid_buf(cache.bufnr) then vim.bo[cache.bufnr].buftype = 'nofile' end
+  if H.is_loaded_buf(cache.bufnr) then vim.bo[cache.bufnr].buftype = 'nofile' end
 end
 
 -- Utilities ------------------------------------------------------------------
@@ -1853,7 +1855,7 @@ end
 
 H.set_buf_name = function(buf_id, name) vim.api.nvim_buf_set_name(buf_id, 'minicompletion://' .. buf_id .. '/' .. name) end
 
-H.is_valid_buf = function(buf_id) return type(buf_id) == 'number' and vim.api.nvim_buf_is_valid(buf_id) end
+H.is_loaded_buf = function(buf_id) return type(buf_id) == 'number' and vim.api.nvim_buf_is_loaded(buf_id) end
 
 H.is_valid_win = function(win_id) return type(win_id) == 'number' and vim.api.nvim_win_is_valid(win_id) end
 
