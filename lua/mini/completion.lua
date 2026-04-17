@@ -1342,7 +1342,7 @@ H.make_lsp_extra_actions = function(lsp_data)
   -- Prefer resolved item over the one from 'textDocument/completion'
   local item = H.completion.lsp.resolved[lsp_data.item_id] or lsp_data.item
 
-  if item.additionalTextEdits == nil and not lsp_data.needs_snippet_insert then return end
+  if item.additionalTextEdits == nil and item.command == nil and not lsp_data.needs_snippet_insert then return end
   local snippet = lsp_data.needs_snippet_insert and H.get_completion_word(item) or nil
 
   -- Make extra actions not only after an explicit `<C-y>` (accept completed
@@ -1370,7 +1370,11 @@ H.make_lsp_extra_actions = function(lsp_data)
     end
 
     -- Try to only apply additional text edits for non-snippet items
-    if snippet == nil then return H.apply_text_edits(item.client_id, item.additionalTextEdits) end
+    if snippet == nil then
+      H.apply_text_edits(item.client_id, item.additionalTextEdits)
+      H.exec_command(item.client_id, item.command)
+      return
+    end
 
     -- Revert to initial completion state to respect text edit coordinates
     local init_base = H.completion.init_base
@@ -1415,6 +1419,12 @@ H.apply_text_edits = function(client_id, text_edits)
   local offset_encoding = client_id == nil and 'utf-16' or vim.lsp.get_client_by_id(client_id).offset_encoding
   vim.lsp.util.apply_text_edits(text_edits, vim.api.nvim_get_current_buf(), offset_encoding)
 end
+
+H.exec_command = function(client_id, command)
+  if command == nil then return end
+  vim.lsp.get_client_by_id(client_id):exec_cmd(command, { bufnr = vim.api.nvim_get_current_buf() })
+end
+if vim.fn.has('nvim-0.11') == 0 then H.exec_command = function(_, _) end end
 
 H.apply_tracked_text_edits = function(client_id, text_edits, from, to)
   if text_edits == nil then return from, to end
