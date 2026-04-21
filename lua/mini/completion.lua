@@ -1500,6 +1500,7 @@ H.info_window_lines = function(info_id)
 
   -- If popup is not from a known LSP server, use 'info' field of complete-item
   if lsp_data == nil or lsp_data.item.client_id == nil then return vim.split(info, '\n') end
+  local client_id = lsp_data.item.client_id
 
   -- Prefer reusing (without new LSP request) already resolved completion item
   local item_id, resolved_cache = lsp_data.item_id, H.completion.lsp.resolved
@@ -1513,7 +1514,7 @@ H.info_window_lines = function(info_id)
   end
 
   -- If server doesn't support resolve or not known, reuse first response
-  local client = vim.lsp.get_client_by_id(lsp_data.item.client_id) or {}
+  local client = vim.lsp.get_client_by_id(client_id) or {}
   local can_resolve = H.table_get(client.server_capabilities, { 'completionProvider', 'resolveProvider' })
   if not can_resolve or client.id == nil then
     resolved_cache[item_id] = lsp_data.item
@@ -1525,6 +1526,8 @@ H.info_window_lines = function(info_id)
   local current_id = H.info.lsp.id + 1
   H.info.lsp.id = current_id
   H.info.lsp.status = 'sent'
+  -- - Remove added `client_id` to comply with LSP spec request params
+  lsp_data.item.client_id = nil
 
   local cancel_fun = H.client_request(client, 'completionItem/resolve', lsp_data.item, function(err, result, _)
     -- Don't do anything if there is other LSP request in action
@@ -1538,6 +1541,9 @@ H.info_window_lines = function(info_id)
     -- Still use original item if there was no response (usually due to error)
     result = result or lsp_data.item
 
+    -- Re-add client id to the resolved item
+    result.client_id = client_id
+
     H.info.lsp.result = result
     -- - Cache resolved item to not have to send same request on revisit.
     --   Do this outside of `H.info.event.completed_item` because it will not
@@ -1546,6 +1552,8 @@ H.info_window_lines = function(info_id)
     H.show_info_window(info_id)
   end, bufnr)
 
+  -- Re-add client id to an unresolved item due to in-place modification
+  lsp_data.item.client_id = client_id
   H.info.lsp.cancel_fun = cancel_fun
   return false
 end
